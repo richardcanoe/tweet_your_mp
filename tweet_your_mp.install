@@ -1,0 +1,127 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the Tweet Your MP module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function tweet_your_mp_schema() {
+  $schema['tweet_your_mp'] = array(
+    'description' => 'Details of MPs',
+    'fields'      => array(
+      'mp_id'  => array(
+        'type' => 'serial',
+        'not_null' => TRUE,
+        'description' => 'MP Id',
+      ),
+      'mp_first_name'  => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => TRUE,
+        'description' => 'MP First Name',
+      ),
+      'mp_last_name'  => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => TRUE,
+        'description' => 'MP Last Name',
+      ),
+      'party' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => FALSE,
+        'description' => 'MP Party',
+      ),
+      'constituency' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => TRUE,
+        'description' => 'MP constituency',
+      ),
+      'twitter' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => FALSE,
+        'description' => 'MP twitter account',
+      ),
+      'notes'  => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => FALSE,
+        'description' => 'Notes',
+      ),
+      'title'  => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => FALSE,
+        'description' => 'MP Title',
+      ),
+      'twfy_page' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => FALSE,
+        'description' => 'They Work For You page',
+      ),
+      'homepage' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => FALSE,
+        'description' => 'MP homepage',
+      ),
+      'email' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => FALSE,
+        'description' => 'MP Parliament email account',
+      ),
+      'alt_email' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => FALSE,
+        'description' => 'MP Alternative email account',
+      ),
+      'phone' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => FALSE,
+        'description' => 'MP Phone',
+      ),
+      'facebook' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => FALSE,
+        'description' => 'MP Facebook Account',
+      ),
+      'address' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => FALSE,
+        'description' => 'MP Parliament address',
+      ),
+      'constituency_postcode' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => FALSE,
+        'description' => 'MP Constituency Postcode',
+      ),
+      'constituency_address' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not_null' => FALSE,
+        'description' => 'MP Constituency Address',
+      ),
+    ),
+    'primary key' => array('mp_id'),
+  );
+  return $schema;
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function tweet_your_mp_uninstall() {
+  drupal_uninstall_schema('tweet_your_mp_schema');
+}

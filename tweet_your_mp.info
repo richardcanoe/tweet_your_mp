@@ -1,1 +1,7 @@
 name = Tweet Your MP
+description = Use the 'They Work For You' API to search for your MP and Tweet them
+core = 7.x
+version = 7.x-1.0
+files[] = twfyapi.php
+files[] = tweet_your_mp.admin.inc
+files[] = js/tweet_your_mp.js

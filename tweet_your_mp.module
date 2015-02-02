@@ -1,0 +1,260 @@
+<?php
+
+/**
+ * @file
+ * Use the 'They Work For You' API to gather details of your MP and Tweet them.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function tweet_your_mp_menu() {
+  $items['admin/config/services/tweet_your_mp'] = array(
+    'title' => 'Tweet your MP',
+    'description' => 'Settings for the tweet your MP module.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('tweet_your_mp_settings_form'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'tweet_your_mp.admin.inc',
+  );
+  $items['admin/config/services/tweet_your_mp/basic'] = array(
+    'title' => 'Basic settings',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['admin/config/services/tweet_your_mp/list'] = array(
+    'title' => 'List MPs',
+    'description' => 'List of MPs for the tweet your MP module.',
+    'page callback' => 'tweet_your_mp_list_mps',
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'tweet_your_mp.admin.inc',
+  );
+  $items['admin/config/services/tweet_your_mp/list/%/edit'] = array(
+    'title' => 'Tweet your MP',
+    'description' => 'List of MPs for the tweet your MP module.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('tweet_your_mp_edit_mp_form', 5),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'tweet_your_mp.admin.inc',
+  );
+  $items['admin/config/services/tweet_your_mp/import'] = array(
+    'title' => 'Import MPs',
+    'description' => 'Import a list of MPs for the tweet your MP module.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('tweet_your_mp_import_form'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'tweet_your_mp.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function tweet_your_mp_block_info() {
+  $blocks['tweet_your_mp_form_block'] = array(
+    'info' => t('Tweet your MP'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function tweet_your_mp_block_view($delta = '') {
+  switch ($delta) {
+    case 'tweet_your_mp_form_block':
+      $block['subject'] = t('Tweet your MP');
+      $block['content'] = drupal_get_form('tweet_your_mp_form');
+      break;
+  }
+  return $block;
+}
+
+/**
+ * Implements hook_form().
+ */
+function tweet_your_mp_form($form, &$form_state) {
+  $form_state['step'] = isset($form_state['step']) ? $form_state['step'] : 1;
+
+  $form['#prefix'] = '<div id="tweet_your_mp_multistep_form">';
+  $form['#suffix'] = '</div>';
+
+  switch ($form_state['step']) {
+    // Step 1
+    case 1:
+      $form['postcode'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Please enter your postcode'),
+        '#weight' => 0,
+      );
+      break;
+
+    case 2:
+      $form['twitter'] = array(
+        '#markup' => tweet_your_mp_process($form_state['storage']),
+        '#weight' => -5,
+      );
+      break;
+  }
+  // Create a container for our buttons.
+  $form['buttons'] = array(
+    '#type' => 'container',
+  );
+
+  // We only want a forward button if we are not on the last step of the form.
+  if ($form_state['step'] !== 2) {
+    $form['buttons']['forward'] = array(
+      '#type' => 'submit',
+      '#value' => t('Next'),
+      '#ajax' => array(
+        'wrapper' => 'tweet_your_mp_multistep_form',
+        'callback' => 'tweet_your_mp_multistep_form_ajax_callback',
+      ),
+    );
+  }
+  // We only want a submit button if we are on the last step of the form.
+  else {
+    $handle = $form_state['storage']['twitter'];
+    $tweet = variable_get('tweet_your_mp_default_tweet', '');
+
+    if (array_key_exists('error', $form_state['storage'])) {
+      return $form;
+    }
+
+    if ($handle == '') {
+      $form['buttons']['submit'] = array(
+        '#markup' => '<div id = "lazy-container">Email <a class="twitter-mention-button" id = "twitter-mention-button"  href="mailto:' . $form_state['storage']['email'] . '"target="_blank">' . $form_state['storage']['email'] . '</a></div>',
+      );
+    }
+    else {
+      // Strip the @ out of the handle re the Twitter API.
+      $handle = substr($handle, 1);
+      // Creates the Twitter URL.
+      $url = url("https://twitter.com/intent/tweet", array(
+        'query' => array(
+          "screen_name" => $handle,
+          "text" => $tweet,
+          'target' => '_blank',
+        )));
+        $form['buttons']['submit'] = array(
+          '#markup' => '<div id = "lazy-container">Tweet <a class="twitter-mention-button" id = "twitter-mention-button" href="' . $url . '">@' . $handle . '</a></div>',
+        );
+    }
+  }
+  return $form;
+}
+
+/**
+ * Implements hook_form_validate().
+ */
+function tweet_your_mp_form_validate($form, &$form_state) {
+  $postcode = $form_state['values']['postcode'];
+  $postcode = str_replace(' ', '', $postcode);
+  // Regex source: http://bit.ly/1AgkHMv Redirects to Cabinet Office Archive.
+  $valid_postcode_exp = '#^(GIR ?0AA|[A-PR-UWYZ]([0-9]{1,2}|([A-HK-Y][0-9]([0-9ABEHMNPRV-Y])?)|[0-9][A-HJKPS-UW]) ?[0-9][ABD-HJLNP-UW-Z]{2})$#';
+  if (!preg_match($valid_postcode_exp, strtoupper($postcode))) {
+    form_set_error('postcode', t('Please enter a valid postcode.'));
+  }
+}
+
+/**
+ * Implements hook_form_submit().
+ */
+function tweet_your_mp_form_submit($form, &$form_state) {
+  // First we determine which step we are on, and save the
+  // submitted values to $form_state['storage']. This will
+  // allow our submitted values to persist.
+  $step = $form_state['step'];
+  $form_state['storage']['step_' . $step] = $form_state['values']['step_' . $step];
+
+  // Check to see if the next/forward button was clicked.
+  if (isset($form_state['values']['forward']) && $form_state['values']['op'] == $form_state['values']['forward']) {
+
+    // Increase the step by one, to move on to the next step.
+    $form_state['step']++;
+    $form_state['storage']['postcode'] = $form_state['values']['postcode'];
+    $constituency = tweet_your_mp_twfy_callback($form_state['storage']['postcode']);
+    if (array_key_exists('error', $constituency)) {
+      $form_state['storage']['error'] = $constituency['error'];
+    }
+    else {
+      $mpdata = tweet_your_mp_get_mp($constituency);
+      foreach ($mpdata as $key => $value) {
+        $form_state['storage'][$key] = $value;
+      }
+    }
+  }
+  // Check to see if the final step has been submitted.
+  elseif (isset($form_state['values']['submit']) && $form_state['values']['op'] == $form_state['values']['submit']) {
+    // The form has been completed, so we want to return the user to step 1
+    // as well as clear any saved values.
+    $form_state['step'] = 1;
+    $form_state['storage'] = array();
+  }
+  // As in ajax_form_multistep_form_back_submit(), we need to set
+  // $form_state['rebuild'] to TRUE, in able to ensure that our
+  // our form is rebuilt, allowing for the multi-step process.
+  $form_state['rebuild'] = TRUE;
+}
+
+/**
+ * Implements hook_ajax_callback().
+ */
+function tweet_your_mp_multistep_form_ajax_callback($form, &$form_state) {
+  return $form;
+}
+
+/**
+ * They Work For You API CallBack.
+ */
+function tweet_your_mp_twfy_callback($postcode) {
+  require_once 'twfyapi.php';
+  // Set up a new instance of the API binding.
+  $twfyapi = new TWFYAPI($twfykey);
+  // Remove spaces from the string.
+  $postcode = str_replace(' ', '', $postcode);
+  $mps = $twfyapi->query('getConstituency', array('output' => 'php', 'postcode' => $postcode));
+
+  $data = unserialize($mps);
+  if (array_key_exists('error', $data)) {
+    watchdog('Tweet Your MP', 'ERROR: ' . $data['error']);
+    return $data;
+  }
+  else {
+    $constituency = $data['name'];
+  }
+  return $constituency;
+}
+
+/**
+ * Returns MP details for a constituency.
+ */
+function tweet_your_mp_get_mp($constituency) {
+  $result = db_select('tweet_your_mp', 't')
+      ->fields('t')
+      ->condition('constituency', $constituency, '=')
+      ->execute()
+      ->fetchAssoc();
+  return $result;
+}
+
+/**
+ * Processes form depending on whether the MP has a Twitter account.
+ */
+function tweet_your_mp_process($storage) {
+  if (array_key_exists('error', $storage)) {
+    $message = "We have encountered an error. Please try later";
+    return $message;
+  }
+  elseif ($storage['twitter'] == '') {
+    $message = "Your MP is " . $storage['mp_first_name'] . " " . $storage['mp_last_name'] . " in " . $storage['constituency'] . " constituency. We do not have a Twitter account for them. Perhaps you would like to email them instead.";
+  }
+  else {
+    $message = "Your MP is " . $storage['mp_first_name'] . " " . $storage['mp_last_name'] . " in " . $storage['constituency'] . " constituency.";
+  }
+  return $message;
+}
