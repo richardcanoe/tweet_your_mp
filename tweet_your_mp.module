@@ -127,7 +127,7 @@ function tweet_your_mp_form($form, &$form_state) {
 
     if ($handle == '') {
       $form['buttons']['submit'] = array(
-        '#markup' => '<div id = "lazy-container">Email <a class="twitter-mention-button" id = "twitter-mention-button"  href="mailto:' . $form_state['storage']['email'] . '"target="_blank">' . $form_state['storage']['email'] . '</a></div>',
+        '#markup' => '<div id = "tweet_your_mp_button">Email <a class="twitter-mention-button" id = "twitter-mention-button"  href="mailto:' . $form_state['storage']['email'] . '"target="_blank">' . $form_state['storage']['email'] . '</a></div>',
       );
     }
     else {
@@ -139,10 +139,11 @@ function tweet_your_mp_form($form, &$form_state) {
           "screen_name" => $handle,
           "text" => $tweet,
           'target' => '_blank',
-        )));
-        $form['buttons']['submit'] = array(
-          '#markup' => '<div id = "lazy-container">Tweet <a class="twitter-mention-button" id = "twitter-mention-button" href="' . $url . '">@' . $handle . '</a></div>',
-        );
+        ),
+      ));
+      $form['buttons']['submit'] = array(
+        '#markup' => '<a class="twitter-mention-button" id = "twitter-mention-button" href="' . $url . '"><div id = "tweet_your_mp_button">Tweet @' . $handle . '</div></a>',
+      );
     }
   }
   return $form;
@@ -220,7 +221,8 @@ function tweet_your_mp_twfy_callback($postcode) {
   $mps = $twfyapi->query('getConstituency', array('output' => 'php', 'postcode' => $postcode));
 
   $data = unserialize($mps);
-  if (array_key_exists('error', $data)) {
+  if (($data == FALSE) || (array_key_exists('error', $data))) {
+    $data['error'] = 'No Result';
     watchdog('Tweet Your MP', 'ERROR: ' . $data['error']);
     return $data;
   }
@@ -252,6 +254,7 @@ function tweet_your_mp_process($storage) {
   }
   elseif ($storage['twitter'] == '') {
     $message = "Your MP is " . $storage['mp_first_name'] . " " . $storage['mp_last_name'] . " in " . $storage['constituency'] . " constituency. We do not have a Twitter account for them. Perhaps you would like to email them instead.";
+
   }
   else {
     $message = "Your MP is " . $storage['mp_first_name'] . " " . $storage['mp_last_name'] . " in " . $storage['constituency'] . " constituency.";
