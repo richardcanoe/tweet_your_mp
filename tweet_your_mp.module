@@ -109,7 +109,7 @@ function tweet_your_mp_form($form, &$form_state) {
   if ($form_state['step'] !== 2) {
     $form['buttons']['forward'] = array(
       '#type' => 'submit',
-      '#value' => t('Next'),
+      '#value' => t('Look up your MP'),
       '#ajax' => array(
         'wrapper' => 'tweet_your_mp_multistep_form',
         'callback' => 'tweet_your_mp_multistep_form_ajax_callback',
@@ -125,12 +125,7 @@ function tweet_your_mp_form($form, &$form_state) {
       return $form;
     }
 
-    if ($handle == '') {
-      $form['buttons']['submit'] = array(
-        '#markup' => '<div id = "tweet_your_mp_button">Email <a class="twitter-mention-button" id = "twitter-mention-button"  href="mailto:' . $form_state['storage']['email'] . '"target="_blank">' . $form_state['storage']['email'] . '</a></div>',
-      );
-    }
-    else {
+    if ($handle != '') {
       // Strip the @ out of the handle re the Twitter API.
       $handle = substr($handle, 1);
       // Creates the Twitter URL.
@@ -180,7 +175,12 @@ function tweet_your_mp_form_submit($form, &$form_state) {
     $form_state['storage']['postcode'] = $form_state['values']['postcode'];
     $constituency = tweet_your_mp_twfy_callback($form_state['storage']['postcode']);
     if (array_key_exists('error', $constituency)) {
-      $form_state['storage']['error'] = $constituency['error'];
+      if ($constituency['error'] == 'Unknown postcode') {
+        form_set_error('postcode', t('Please enter a valid postcode.'));
+      }
+      else {
+        form_set_error('postcode', t('We have encountered an error. Please try later.'));
+      }
     }
     else {
       $mpdata = tweet_your_mp_get_mp($constituency);
@@ -213,6 +213,7 @@ function tweet_your_mp_multistep_form_ajax_callback($form, &$form_state) {
  * They Work For You API CallBack.
  */
 function tweet_your_mp_twfy_callback($postcode) {
+  $twfykey = variable_get('tweet_your_mp_api', NULL);
   require_once 'twfyapi.php';
   // Set up a new instance of the API binding.
   $twfyapi = new TWFYAPI($twfykey);
@@ -222,7 +223,6 @@ function tweet_your_mp_twfy_callback($postcode) {
 
   $data = unserialize($mps);
   if (($data == FALSE) || (array_key_exists('error', $data))) {
-    $data['error'] = 'No Result';
     watchdog('Tweet Your MP', 'ERROR: ' . $data['error']);
     return $data;
   }
@@ -248,16 +248,12 @@ function tweet_your_mp_get_mp($constituency) {
  * Processes form depending on whether the MP has a Twitter account.
  */
 function tweet_your_mp_process($storage) {
-  if (array_key_exists('error', $storage)) {
-    $message = "We have encountered an error. Please try later";
-    return $message;
-  }
-  elseif ($storage['twitter'] == '') {
-    $message = "Your MP is " . $storage['mp_first_name'] . " " . $storage['mp_last_name'] . " in " . $storage['constituency'] . " constituency. We do not have a Twitter account for them. Perhaps you would like to email them instead.";
+  if ($storage['twitter'] == '') {
+    $message = "Your MP is " . $storage['mp_first_name'] . " " . $storage['mp_last_name'] . " in " . $storage['constituency'] . " constituency. Unfortunately " . $storage['mp_first_name'] . " " . $storage['mp_last_name'] . " isn't on Twitter. To support our Cross Out Cancer campaign please <a href='http://www.cancerresearchuk.org/support-us/campaign-for-us/cross-cancer-out'>visit our website</a>";
 
   }
   else {
     $message = "Your MP is " . $storage['mp_first_name'] . " " . $storage['mp_last_name'] . " in " . $storage['constituency'] . " constituency.";
   }
-  return $message;
+  return '<p>' . $message . '</p>';
 }
