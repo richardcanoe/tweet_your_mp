@@ -125,14 +125,18 @@ function tweet_your_mp_form($form, &$form_state) {
       return $form;
     }
 
-    if ($handle != '') {
+    if ($handle == '') {
+      $form['buttons']['submit'] = array(
+        '#markup' => '<div id = "tweet_your_mp_button">Email <a class="twitter-mention-button" id = "twitter-mention-button"  href="mailto:' . $form_state['storage']['email'] . '"target="_blank">' . $form_state['storage']['email'] . '</a></div>',
+       );
+     }
+     else {
       // Strip the @ out of the handle re the Twitter API.
       $handle = substr($handle, 1);
       // Creates the Twitter URL.
       $url = url("https://twitter.com/intent/tweet", array(
         'query' => array(
-          "screen_name" => $handle,
-          "text" => $tweet,
+          "text" => '@' . $handle . ' ' . $tweet,
           'target' => '_blank',
         ),
       ));
@@ -249,8 +253,7 @@ function tweet_your_mp_get_mp($constituency) {
  */
 function tweet_your_mp_process($storage) {
   if ($storage['twitter'] == '') {
-    $message = "Your MP is " . $storage['mp_first_name'] . " " . $storage['mp_last_name'] . " in " . $storage['constituency'] . " constituency. Unfortunately " . $storage['mp_first_name'] . " " . $storage['mp_last_name'] . " isn't on Twitter. To support our Cross Out Cancer campaign please <a href='http://www.cancerresearchuk.org/support-us/campaign-for-us/cross-cancer-out'>visit our website</a>";
-
+    $message = "Your MP is " . $storage['mp_first_name'] . " " . $storage['mp_last_name'] . " in " . $storage['constituency'] . " constituency. We do not have a Twitter account for them. Perhaps you would like to email them instead.";
   }
   else {
     $message = "Your MP is " . $storage['mp_first_name'] . " " . $storage['mp_last_name'] . " in " . $storage['constituency'] . " constituency.";
