@@ -95,7 +95,7 @@ function tweet_your_mp_form($form, &$form_state) {
 
     case 2:
       $form['twitter'] = array(
-        '#markup' => tweet_your_mp_process($form_state['storage']),
+        '#markup' => tweet_your_mp_output($form_state['storage']),
         '#weight' => -5,
       );
       break;
@@ -251,7 +251,7 @@ function tweet_your_mp_get_mp($constituency) {
 /**
  * Processes form depending on whether the MP has a Twitter account.
  */
-function tweet_your_mp_process($storage) {
+function tweet_your_mp_output($storage) {
   if ($storage['twitter'] == '') {
     $message = "Your MP is " . $storage['mp_first_name'] . " " . $storage['mp_last_name'] . " in " . $storage['constituency'] . " constituency. We do not have a Twitter account for them. Perhaps you would like to email them instead.";
   }
